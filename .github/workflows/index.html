@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#8b5e3c"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<title>دفتر مذكراتي وقصائدي</title>
+<style>
+:root{--bg:#f3ece0;--paper:#fbf7ef;--tx:#3b2f25;--mut:#8a7a68;--acc:#8b5e3c;--at:#fff;--bd:#e0d4c0;--soft:#efe5d3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1814;--paper:#26201a;--tx:#eadfce;--mut:#a39581;--acc:#d2a273;--at:#1c1814;--bd:#3a3128;--soft:#31291f}}
+:root[data-theme="dark"]{--bg:#1c1814;--paper:#26201a;--tx:#eadfce;--mut:#a39581;--acc:#d2a273;--at:#1c1814;--bd:#3a3128;--soft:#31291f}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font-family:"Noto Naskh Arabic","Amiri","Traditional Arabic","Geeza Pro","Segoe UI",Tahoma,serif;font-size:17px;max-width:720px;margin:auto;padding:0 12px 90px}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 0 6px}
+h1{font-size:22px;margin:0;color:var(--acc)}
+.ic{background:var(--soft);border:0;border-radius:10px;padding:8px 12px;color:var(--tx);font:inherit;cursor:pointer}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--paper);color:var(--tx);font:inherit;margin:3px 0 10px}
+textarea{line-height:1.9;min-height:260px;resize:vertical}
+nav{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px}
+nav button{border:1px solid var(--bd);background:var(--paper);color:var(--tx);padding:6px 14px;border-radius:18px;font:inherit;white-space:nowrap;cursor:pointer}
+nav button.on{background:var(--acc);color:var(--at);border-color:var(--acc)}
+.card{background:var(--paper);border:1px solid var(--bd);border-radius:6px 14px 14px 6px;border-right:5px solid var(--acc);padding:12px 14px;margin-bottom:10px;cursor:pointer}
+.card h3{margin:0 0 2px;font-size:18px}.meta{font-size:13px;color:var(--mut)}
+.ex{white-space:pre-line;color:var(--tx);opacity:.85;margin-top:6px;max-height:4.8em;overflow:hidden}
+.tag{background:var(--soft);color:var(--acc);padding:1px 9px;border-radius:10px;font-size:12px}
+.fab{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:18px;background:var(--acc);color:var(--at);border:0;border-radius:28px;padding:14px 22px;font:inherit;font-size:17px;box-shadow:0 4px 14px #0004;cursor:pointer}
+#m{position:fixed;inset:0;background:var(--bg);overflow:auto;display:none;z-index:10}
+#m>div{max-width:720px;margin:auto;padding:14px 12px calc(30px + env(safe-area-inset-bottom,0px))}
+.b{background:var(--acc);color:var(--at);border:0;border-radius:10px;padding:10px 18px;font:inherit;cursor:pointer}.b.o{background:var(--soft);color:var(--tx)}.b.d{background:transparent;color:#c0392b;border:1px solid var(--bd)}
+.imgs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.imgs div{position:relative}.imgs img{width:96px;height:96px;object-fit:cover;border-radius:8px}.imgs b{position:absolute;top:2px;left:2px;background:#000a;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;cursor:pointer;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#lock{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px}
+body.hide #app,body.hide #m,body.hide .fab{visibility:hidden}
+</style></head><body>
+<div id="app"></div><button class="fab" onclick="openE()">✍️ كتابة جديدة</button><div id="m"></div>
+<div id="lock"><h1>🔒 دفتري</h1><input id="pin" type="password" inputmode="numeric" placeholder="الرمز السري" style="max-width:220px;text-align:center"><button class="b" onclick="unlock()">دخول</button></div>
+<script>
+const $=s=>document.querySelector(s),K='mydiary_v1',TN={j:'مذكرة',p:'قصيدة',t:'خاطرة'};
+let D,tab='all',q='',tg='',cur=null;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+function load(){try{D=JSON.parse(localStorage.getItem(K))}catch(e){}D=D||{e:[],s:{pin:'',theme:''}};document.documentElement.dataset.theme=D.s.theme||''}
+function save(){try{localStorage.setItem(K,JSON.stringify(D));return true}catch(e){alert('تعذّر الحفظ: المساحة ممتلئة. صدّر نسخة احتياطية واحذف بعض الصور.');return false}}
+function render(){
+ const all=D.e,tags=[...new Set(all.map(x=>x.g).filter(Boolean))];
+ const T=[['all','الكل'],['j','المذكرات'],['p','القصائد'],['t','الخواطر'],['fav','⭐ المفضلة']];
+ let L=all.filter(x=>tab=='all'||(tab=='fav'?x.f:x.t==tab)).filter(x=>!tg||x.g==tg).filter(x=>!q||(x.h+x.b+(x.g||'')).includes(q));
+ L.sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:b.ts-a.ts);
+ $('#app').innerHTML=`<header><h1>📖 دفتر مذكراتي وقصائدي</h1><button class="ic" onclick="sets()">⚙️</button></header>
+ <input id="sq" placeholder="🔍 ابحث في المذكرات والقصائد والخواطر" value="${esc(q)}" oninput="q=this.value;const p=this.selectionStart;render();const e=$('#sq');e.focus();e.setSelectionRange(p,p)">
+ <nav>${T.map(([k,l])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('')}</nav>
+ ${tags.length?`<nav>${tags.map(t=>`<button class="${tg==t?'on':''}" onclick="tg=tg==this.dataset.t?'':this.dataset.t;render()" data-t="${esc(t)}">#${esc(t)}</button>`).join('')}</nav>`:''}
+ ${L.map(x=>`<div class="card" onclick="openE('${x.id}')"><h3>${x.f?'⭐ ':''}${esc(x.h||'بدون عنوان')}</h3><div class="meta">${TN[x.t]} · ${x.d} ${x.g?`<span class="tag">${esc(x.g)}</span>`:''} ${x.i&&x.i.length?'🖼️':''}</div><div class="ex">${esc(x.b.slice(0,160))}</div></div>`).join('')||'<p class="meta" style="text-align:center;margin-top:40px">لا يوجد شيء هنا بعد. اضغط «كتابة جديدة» للبدء.</p>'}`;
+}
+function openE(id){
+ cur=id?JSON.parse(JSON.stringify(D.e.find(x=>x.id==id))):{id:'',t:tab=='p'||tab=='t'?tab:'j',h:'',b:'',d:today(),g:'',f:false,i:[]};
+ const tags=[...new Set(D.e.map(x=>x.g).filter(Boolean))];
+ modal(`<div class="row" style="justify-content:space-between"><h2 style="margin:6px 0">${id?'تعديل':'كتابة جديدة'}</h2><button class="ic" onclick="closeM()">✕</button></div>
+ <div class="row"><select id="et" style="flex:1">${Object.entries(TN).map(([k,v])=>`<option value="${k}" ${cur.t==k?'selected':''}>${v}</option>`).join('')}</select><input id="ed" type="date" value="${cur.d}" style="flex:1"></div>
+ <input id="eh" placeholder="العنوان" value="${esc(cur.h)}">
+ <input id="eg" list="tl" placeholder="التصنيف أو الوسم (اختياري)" value="${esc(cur.g)}"><datalist id="tl">${tags.map(t=>`<option value="${esc(t)}">`).join('')}</datalist>
+ <textarea id="eb" placeholder="اكتب هنا... تُحفظ الأسطر والأبيات كما كتبتها">${esc(cur.b)}</textarea>
+ <div class="imgs" id="im"></div>
+ <div class="row"><label class="b o">🖼️ إضافة صورة<input type="file" accept="image/*" multiple hidden onchange="addImg(this)"></label><label><input type="checkbox" id="ef" ${cur.f?'checked':''} style="width:auto;margin:0 4px"> مفضلة ⭐</label></div>
+ <div class="row" style="margin-top:14px"><button class="b" onclick="saveE()">حفظ</button>${id?`<button class="b d" onclick="delE('${id}')">حذف</button>`:''}</div>`);
+ showImgs();
+}
+function showImgs(){$('#im').innerHTML=cur.i.map((s,n)=>`<div><img src="${s}"><b onclick="cur.i.splice(${n},1);showImgs()">×</b></div>`).join('')}
+function addImg(inp){[...inp.files].forEach(f=>{const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const s=Math.min(1,800/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);cur.i.push(c.toDataURL('image/jpeg',.7));showImgs()};i.src=r.result};r.readAsDataURL(f)});inp.value=''}
+function saveE(){
+ const x={...cur,t:$('#et').value,d:$('#ed').value||today(),h:$('#eh').value.trim(),g:$('#eg').value.trim(),b:$('#eb').value,f:$('#ef').checked};
+ if(!x.h&&!x.b.trim()&&!x.i.length){closeM();return}
+ const old=JSON.stringify(D.e);
+ if(x.id){D.e=D.e.map(y=>y.id==x.id?x:y)}else{x.id=Math.random().toString(36).slice(2,9);x.ts=Date.now();D.e.push(x)}
+ if(!save()){D.e=JSON.parse(old);return}
+ closeM();render();
+}
+function delE(id){if(!confirm('حذف هذا العنصر نهائيًا؟'))return;D.e=D.e.filter(x=>x.id!=id);save();closeM();render()}
+function modal(h){const m=$('#m');m.innerHTML='<div>'+h+'</div>';m.style.display='block';m.scrollTop=0}
+function closeM(){$('#m').style.display='none'}
+function sets(){
+ modal(`<div class="row" style="justify-content:space-between"><h2 style="margin:6px 0">الإعدادات</h2><button class="ic" onclick="closeM()">✕</button></div>
+ <label>المظهر</label><select id="st" onchange="D.s.theme=this.value;save();document.documentElement.dataset.theme=this.value"><option value="">تلقائي (حسب الهاتف)</option><option value="light">نهاري</option><option value="dark">ليلي</option></select>
+ <label>الرمز السري (اتركه فارغًا لإلغاء القفل)</label><input id="sp" type="password" inputmode="numeric" value="${esc(D.s.pin)}"><button class="b" onclick="D.s.pin=$('#sp').value;save();alert('تم الحفظ')">حفظ الرمز</button>
+ <h3>النسخ الاحتياطي</h3><p class="meta">تُحفظ كل بياناتك داخل هذا الجهاز فقط. صدّر نسخة إلى ملف تحتفظ به بنفسك، واستوردها عند الحاجة.</p>
+ <div class="row"><button class="b" onclick="exp()">⬇️ تصدير نسخة</button><label class="b o">⬆️ استيراد<input type="file" accept=".json" hidden onchange="imp(this)"></label></div>
+ <p class="meta">عدد العناصر المحفوظة: ${D.e.length}</p>`);
+ $('#st').value=D.s.theme||'';
+}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='my-diary-backup-'+today()+'.json';document.body.appendChild(a);a.click();a.remove()}
+function imp(i){const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!Array.isArray(x.e)||!x.s)throw 0;if(!confirm('سيتم استبدال المحتوى الحالي. متابعة؟'))return;D=x;save();document.documentElement.dataset.theme=D.s.theme||'';closeM();render()}catch(e){alert('ملف غير صالح')}};r.readAsText(f)}
+function unlock(){if($('#pin').value===D.s.pin){$('#lock').style.display='none';document.body.classList.remove('hide');$('#pin').value=''}else{$('#pin').value='';$('#pin').placeholder='رمز خاطئ'}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&D.s.pin){document.body.classList.add('hide');$('#lock').style.display='flex'}});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+load();if(D.s.pin)$('#lock').style.display='flex';render();
+</script></body></html>
